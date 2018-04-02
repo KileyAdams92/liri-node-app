@@ -1,13 +1,12 @@
+// requiring packages needed for liri.js
 var keys = require("./keys.js");
 var request = require("request");
 require("dotenv").config();
-
 var fs = require("file-system");
 var Twitter = require("twitter");
 var Spotify = require("node-spotify-api");
 
-var liriCommand = process.argv[2];
-
+//TWITTER ===============
 var client = new Twitter({
   consumer_key: process.env.TWITTER_CONSUMER_KEY,
   consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
@@ -15,7 +14,7 @@ var client = new Twitter({
   access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
 });
 
-console.log(`this is ${client}`);
+// function for retrieving tweets
 var getTweets = function() {
   var params = { screen_name: "KAdams48235137" };
   client.get("statuses/user_timeline", params, function(
@@ -34,15 +33,16 @@ var getTweets = function() {
     }
   });
 };
-
+//SPOTIFY ==================
 var spotify = new Spotify({
   id: process.env.SPOTIFY_ID,
   secret: process.env.SPOTIFY_SECRET
 });
 
-spotify.getSong = function() {
-  console.log("got into");
-  spotify.search({ type: "track", limit: 1, query: process.argv[3] }, function(
+// function for retrieving song from spotify
+spotify.getSong = function(songName) {
+  console.log(songName);
+  spotify.search({ type: "track", limit: 1, query: songName }, function(
     err,
     data
   ) {
@@ -59,65 +59,79 @@ spotify.getSong = function() {
   });
 };
 
-var pick = function(caseData, functionData) {
-  switch (liriCommand) {
+//OMDB =============
+//function for retrieving information from OMDB
+var movieThis = function(movie) {
+  request("http://www.omdbapi.com/?apikey=trilogy&t=" + movie, function(
+    error,
+    response,
+    body
+  ) {
+    if (error) {
+      return console.log(error);
+    } else if (response.statusCode !== 200) {
+      return console.log("Error: returned " + response.statusCode);
+    }
+
+    var data = JSON.parse(body);
+
+    if (data.Error) {
+      return console.log(data.Error);
+    }
+
+    console.log("Title: " + data.Title);
+    console.log("Year: " + data.Year);
+    console.log("Rating: " + data.Rated);
+    console.log("Rotten Tomatoes: " + data.Ratings[0].Value);
+    console.log("Country Produced: " + data.Country);
+    console.log("Language: " + data.Language);
+    console.log("Plot: " + data.Plot);
+    console.log("Actors: " + data.Actors);
+  });
+};
+// if no movie is provided
+var noMovie = function(movie) {
+  if (movie === "") {
+    movie = "Mr. Nobody";
+  }
+  movieThis(movie);
+};
+
+//function for do-what-it-says command
+var doIt = function() {
+  fs.readFile("random.txt", "UTF8", function(err, data) {
+    if (err) {
+      return console.log(err);
+    }
+
+    // Data from file is in <cmd>,<song-or-movie>
+
+    var ranArr = data.split(","); // ['movie-this', '"Planes', ' Trains & Autmobiles"']
+    var cmd = ranArr[0]; // 'movie-this'
+    var val = data.replace(cmd + ",", "");
+
+    runCommand(cmd, val);
+  });
+};
+
+//switch statement for commands given
+var runCommand = function(command, value) {
+  switch (command) {
     case "my-tweets":
       getTweets();
-      console.log("here are your tweets");
       break;
     case "spotify-this-song":
-      spotify.getSong();
-      console.log("Play this song");
+      spotify.getSong(value);
       break;
     case "movie-this":
-      noMovie();
+      noMovie(value);
       break;
     case "do-what-it-says":
-      noCommand();
+      doIt();
       break;
     default:
       console.log("LIRI DOES NOT KNOW THAT");
   }
 };
 
-var movieThis = function() {
-  request(
-    "http://www.omdbapi.com/?apikey=trilogy&t=" + process.argv[3],
-    function(error, response, body) {
-      console.log("Title: " + JSON.parse(body).Title);
-      console.log("Year: " + JSON.parse(body).Year);
-      console.log("Rating: " + JSON.parse(body).Rated);
-      console.log("Rotten Tomatoes: " + JSON.parse(body).Ratings[0].Value);
-      console.log("Country Produced: " + JSON.parse(body).Country);
-      console.log("Language: " + JSON.parse(body).Language);
-      console.log("Plot: " + JSON.parse(body).Plot);
-      console.log("Actors: " + JSON.parse(body).Actors);
-    }
-  );
-};
-
-var noMovie = function() {
-  if (process.argv[3] !== "") {
-    process.argv[3] = "Mr. Nobody";
-    movieThis();
-  } else {
-    movieThis();
-  }
-};
-
-var noCommand = function() {
-  fs.readFile("random.txt", "UTF8", function(err, data) {
-    if (err) {
-      return console.log(err);
-    }
-    process.argv[3] = data;
-    console.log(data);
-    console.log("PROCESS: " + process.argv[3]);
-    spotify.getSong();
-  });
-};
-
-var runThis = function(argOne, argTwo) {
-  pick(argOne, argTwo);
-};
-runThis(process.argv[2], process.argv[3]);
+runCommand(process.argv[2], process.argv[3]);

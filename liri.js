@@ -8,6 +8,17 @@ var Spotify = require("node-spotify-api");
 
 var instruction = process.argv[3];
 
+//logging command and user history
+var liriCommand = process.argv[2];
+function logging() {
+  var log = "log.txt";
+  fs.appendFile(log, liriCommand + ": " + instruction + ". \n", function(err) {
+    if (err) {
+      console.log(err);
+    }
+  });
+}
+
 //TWITTER ---------------------------
 var client = new Twitter({
   consumer_key: process.env.TWITTER_CONSUMER_KEY,
@@ -46,6 +57,7 @@ var noSong = function(instruction) {
   if (instruction === undefined) {
     instruction = "The Sign";
   }
+  console.log(instruction);
   spotify.getSong(instruction);
 };
 
@@ -123,15 +135,19 @@ var runCommand = function(command, value) {
   switch (command) {
     case "my-tweets":
       getTweets();
+      logging();
       break;
     case "spotify-this-song":
       noSong(value);
+      logging();
       break;
     case "movie-this":
       movieThis(value);
+      logging();
       break;
     case "do-what-it-says":
       doIt();
+      logging();
       break;
     default:
       console.log("LIRI DOES NOT KNOW THAT");

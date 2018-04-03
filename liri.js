@@ -6,7 +6,9 @@ var fs = require("file-system");
 var Twitter = require("twitter");
 var Spotify = require("node-spotify-api");
 
-//TWITTER ===============
+var instruction = process.argv[3];
+
+//TWITTER ---------------------------
 var client = new Twitter({
   consumer_key: process.env.TWITTER_CONSUMER_KEY,
   consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
@@ -26,22 +28,29 @@ var getTweets = function() {
       for (var i = 0; i < 20; i++) {
         console.log(tweets[i].created_at);
         console.log(tweets[i].text);
-        console.log("-------------");
+        console.log("--------------------------------------");
       }
     } else {
       console.log(error);
     }
   });
 };
-//SPOTIFY ==================
+//SPOTIFY --------------------------
 var spotify = new Spotify({
   id: process.env.SPOTIFY_ID,
   secret: process.env.SPOTIFY_SECRET
 });
 
+// if no song is provided
+var noSong = function(instruction) {
+  if (instruction === undefined) {
+    instruction = "The Sign";
+  }
+  spotify.getSong(instruction);
+};
+
 // function for retrieving song from spotify
 spotify.getSong = function(songName) {
-  console.log(songName);
   spotify.search({ type: "track", limit: 1, query: songName }, function(
     err,
     data
@@ -59,10 +68,13 @@ spotify.getSong = function(songName) {
   });
 };
 
-//OMDB =============
+//OMDB -----------------
 //function for retrieving information from OMDB
-var movieThis = function(movie) {
-  request("http://www.omdbapi.com/?apikey=trilogy&t=" + movie, function(
+var movieThis = function() {
+  if (instruction == undefined) {
+    instruction = "Mr. Nobody";
+  }
+  request("http://www.omdbapi.com/?apikey=trilogy&t=" + instruction, function(
     error,
     response,
     body
@@ -89,13 +101,6 @@ var movieThis = function(movie) {
     console.log("Actors: " + data.Actors);
   });
 };
-// if no movie is provided
-var noMovie = function(movie) {
-  if (movie === "") {
-    movie = "Mr. Nobody";
-  }
-  movieThis(movie);
-};
 
 //function for do-what-it-says command
 var doIt = function() {
@@ -103,11 +108,10 @@ var doIt = function() {
     if (err) {
       return console.log(err);
     }
-
     // Data from file is in <cmd>,<song-or-movie>
 
-    var ranArr = data.split(","); // ['movie-this', '"Planes', ' Trains & Autmobiles"']
-    var cmd = ranArr[0]; // 'movie-this'
+    var ranArr = data.split(",");
+    var cmd = ranArr[0];
     var val = data.replace(cmd + ",", "");
 
     runCommand(cmd, val);
@@ -121,10 +125,10 @@ var runCommand = function(command, value) {
       getTweets();
       break;
     case "spotify-this-song":
-      spotify.getSong(value);
+      noSong(value);
       break;
     case "movie-this":
-      noMovie(value);
+      movieThis(value);
       break;
     case "do-what-it-says":
       doIt();
